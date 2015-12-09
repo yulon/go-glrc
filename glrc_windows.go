@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	opengl32 = syscall.NewLazyDLL("opengl32.dll")
-	user32 = syscall.NewLazyDLL("user32.dll")
-	gdi32 = syscall.NewLazyDLL("gdi32.dll")
+	opengl32, _ = syscall.LoadLibrary("opengl32.dll")
+	user32, _ = syscall.LoadLibrary("user32.dll")
+	gdi32, _ = syscall.LoadLibrary("gdi32.dll")
 
-	getDC = user32.NewProc("GetDC").Call
-	choosePixelFormat = gdi32.NewProc("ChoosePixelFormat").Call
-	setPixelFormat = gdi32.NewProc("SetPixelFormat").Call
-	wglCreateContext = opengl32.NewProc("wglCreateContext").Call
+	getDC, _ = syscall.GetProcAddress(user32, "GetDC")
+	choosePixelFormat, _ = syscall.GetProcAddress(gdi32, "ChoosePixelFormat")
+	setPixelFormat, _ = syscall.GetProcAddress(gdi32, "SetPixelFormat")
+	wglCreateContext, _ = syscall.GetProcAddress(opengl32, "wglCreateContext")
 )
 
 type pixelformatdescriptor struct{
@@ -72,8 +72,8 @@ var pfd = pixelformatdescriptor{
 }
 
 func convDC(hDC uintptr) {
-	PixelFormat, _, _ := choosePixelFormat(hDC, uintptr(unsafe.Pointer(&pfd)))
-	setPixelFormat(hDC, PixelFormat, uintptr(unsafe.Pointer(&pfd)))
+	PixelFormat, _, _ := syscall.Syscall(choosePixelFormat, 2, hDC, uintptr(unsafe.Pointer(&pfd)), 0)
+	syscall.Syscall(setPixelFormat, 3, hDC, PixelFormat, uintptr(unsafe.Pointer(&pfd)))
 }
 
 type RenderingContext struct{
@@ -82,20 +82,20 @@ type RenderingContext struct{
 }
 
 func New(id uintptr) *RenderingContext {
-	hDC, _, _ := getDC(id)
+	hDC, _, _ := syscall.Syscall(getDC, 1, id, 0, 0)
 	convDC(hDC)
-	hRC, _, _ := wglCreateContext(hDC)
+	hRC, _, _ := syscall.Syscall(wglCreateContext, 1, hDC, 0, 0)
 	return &RenderingContext{hDC, hRC}
 }
 
-var wglMakeCurrent = opengl32.NewProc("wglMakeCurrent").Call
+var wglMakeCurrent, _ = syscall.GetProcAddress(opengl32, "wglMakeCurrent")
 
 func (rc *RenderingContext) Select() {
-	wglMakeCurrent(rc.hDC, rc.hRC)
+	syscall.Syscall(wglMakeCurrent, 2, rc.hDC, rc.hRC, 0)
 }
 
-var wglSwapBuffers = opengl32.NewProc("wglSwapBuffers").Call
+var wglSwapBuffers, _ = syscall.GetProcAddress(opengl32, "wglSwapBuffers")
 
 func (rc *RenderingContext) Render() {
-	wglSwapBuffers(rc.hDC)
+	syscall.Syscall(wglSwapBuffers, 1, rc.hDC, 0, 0)
 }
