@@ -14,7 +14,7 @@ func main() {
 		wnd.SetClientSzie(oswnd.Size{800, 600})
 		wnd.MoveToScreenCenter()
 
-		rc := glrc.New(wnd.GetId())
+		rc := glrc.New(wnd.GetDisplayId())
 		rc.Select()
 
 		version := gl.GoStr(gl.GetString(gl.VERSION))
