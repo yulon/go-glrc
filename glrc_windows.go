@@ -10,7 +10,6 @@ var (
 	user32, _ = syscall.LoadLibrary("user32.dll")
 	gdi32, _ = syscall.LoadLibrary("gdi32.dll")
 
-	getDC, _ = syscall.GetProcAddress(user32, "GetDC")
 	choosePixelFormat, _ = syscall.GetProcAddress(gdi32, "ChoosePixelFormat")
 	setPixelFormat, _ = syscall.GetProcAddress(gdi32, "SetPixelFormat")
 	wglCreateContext, _ = syscall.GetProcAddress(opengl32, "wglCreateContext")
@@ -81,11 +80,10 @@ type RenderingContext struct{
 	hRC uintptr
 }
 
-func New(id uintptr) *RenderingContext {
-	hDC, _, _ := syscall.Syscall(getDC, 1, id, 0, 0)
-	convDC(hDC)
-	hRC, _, _ := syscall.Syscall(wglCreateContext, 1, hDC, 0, 0)
-	return &RenderingContext{hDC, hRC}
+func New(displayId uintptr) *RenderingContext {
+	convDC(displayId)
+	hRC, _, _ := syscall.Syscall(wglCreateContext, 1, displayId, 0, 0)
+	return &RenderingContext{displayId, hRC}
 }
 
 var wglMakeCurrent, _ = syscall.GetProcAddress(opengl32, "wglMakeCurrent")
